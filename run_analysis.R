@@ -1,3 +1,6 @@
+#!/usr/bin/env Rscript
+# ================================================================================
+#
 # Getting and Cleaning Data - Course Project
 #
 # From the assignment text:
@@ -23,6 +26,7 @@
 # 4. Appropriately labels the data set with descriptive variable names. 
 # 5. From the data set in step 4, creates a second, independent tidy data set 
 # with the average of each variable for each activity and each subject.
+# ================================================================================
 
 ## downloadAndUnpackData()
 #
@@ -41,7 +45,7 @@ downloadAndUnpackData <- function() {
   # Download data archive.
   if(!file.exists(file_name)) {
     message('Downloading data from Internet')
-    download.file(file_url, file_name)
+    download.file(file_url, file_name, mode='wb', method='auto')
   }
   else {
     warning('Local copy of data archive found, not downloading')
@@ -70,13 +74,14 @@ downloadAndUnpackData <- function() {
 #
 loadSourceData <- function(dataDir='UCI HAR Dataset', dataset='train') {
   # Load subject data series
-  data_filename <- file.path(dataDir, dataset, sprintf('subject_%s.txt', dataset))
+  data_filename <- file.path(dataDir, dataset, 
+                             sprintf('subject_%s.txt', dataset))
   subject_data <- read.table(data_filename, col.names=c('Subject'),
-                             colClasses='factor')
+                             colClasses='numeric', header=FALSE)
   # Load activity data series
   data_filename <- file.path(dataDir, dataset, sprintf('y_%s.txt', dataset))
   activity_data <- read.table(data_filename, col.names=c('Activity'), 
-                              colClasses='factor')
+                              colClasses='factor', header=FALSE)
   # Load vector data labels.
   data_filename <- file.path(dataDir, 'features.txt')
   vec_data_labels <- read.table(data_filename, header=FALSE, 
@@ -84,7 +89,7 @@ loadSourceData <- function(dataDir='UCI HAR Dataset', dataset='train') {
                                 stringsAsFactors=FALSE)
   # Load vector data adding column labels.
   data_filename <- file.path(dataDir, dataset, sprintf('X_%s.txt', dataset))
-  vec_data <- read.fwf(data_filename, rep(16, 561), header=FALSE, 
+  vec_data <- read.table(data_filename, header=FALSE, 
                        col.names=vec_data_labels$Labels, colClasses="numeric")
   # Merge data components.
   src_data <- cbind(subject_data, activity_data, vec_data)
@@ -98,11 +103,11 @@ loadSourceData <- function(dataDir='UCI HAR Dataset', dataset='train') {
 #   mergedData <- mergeTrainingAndTest()
 #
 mergeTrainingAndTest <- function(dataDir='UCI HAR Dataset') {
-  # Load training data.
+  message('Loading \'train\' data...')
   training_data <- loadSourceData(dataDir, 'train')
-  # Load test data.
+  message('Loading \'test\' data...')
   test_data <- loadSourceData(dataDir, 'test')
-  # Merge training and test data.
+  message('Merging \'train\' and \'test\' data.')
   merged_data <- rbind(training_data, test_data)
 }
 
@@ -170,20 +175,70 @@ expandColumnLabels <- function(data) {
   data
 }
 
+## activityAndSubjectMeans()
+#
+# Caclulate the means for each variable for each combination of subject and 
+# activity.
+#
+# Usage:
+#   meansData <- activityAndSubjectMeans(data)
+#
+activityAndSubjectMeans <- function(data) {
+  # Using 'plyr' to provide ddply().
+  if(require(plyr)) {
+    means_data <- ddply(data, .(Activity, Subject), 
+                        function(x){ colMeans(x[,-c(1:2)]) })
+  }
+  # Using 'reshape2' to provide melt()
+  else if(require(reshape2)) {
+    melted_data <- melt(data, id=c('Subject', 'Activity'))
+    means_data <- dcast(melted_data, Activity + Subject ~ ..., 
+                        fun.aggregate=mean)
+  }
+  # Use aggregate(), part of the 'stats' package.
+  else {
+    # Calculate means based on groupings of Subject and Activity.
+    means_data <- aggregate(relabeled_data[,-c(1:2)], 
+                            by=list(relabeled_data$Subject, 
+                                    relabeled_data$Activity), FUN=mean)
+    # Re-label the grouping columns.
+    column_labels <- colnames(means_data)
+    column_labels[1] <- 'Subject'
+    column_labels[2] <- 'Activity'
+    colnames(means_data) <- column_labels
+  }
+  # Re-label data columns to add "MeanOf" prefix.
+  column_labels <- colnames(means_data)
+  column_labels <- sub('^time', 'MeanOfTime', column_labels)
+  column_labels <- sub('^freq', 'MeanOfFreq', column_labels)
+  colnames(means_data) <- column_labels
+  # Return data.frame.
+  means_data
+}
+
 ## runAnalysis()
 #
-run_analysis <- function() {
-  # Step 0: Download and unpack data.
+# Run the analysis workflow and save the resulting data in a file.
+#
+# Usage:
+#   runAnalysis()
+#
+runAnalysis <- function() {
+  message('Step 0: Download and unpack data.')
   downloadAndUnpackData()
-  # Step 1: Load and merge the 'training' and 'test' sets to create one data set.
+  message('Step 1: Load and merge the \'training\' and \'test\' sets to create one data set.')
   src_data <- mergeTrainingAndTest(dataDir='UCI HAR Dataset')
-  # Step 2: Extract measurements on mean and standard deviation.
+  message('Step 2: Extract measurements on mean and standard deviation.')
   selected_data <- extractMeanAndSdColumns(src_data)
-  # Step 3: Use descriptive activity names for activities in the data set
+  message('Step 3: Use descriptive activity names for activities in the data set')
   with_activity_labels <- labelActivities(selected_data, dataDir='UCI HAR Dataset')
-  # 4. Appropriately labels the data set with descriptive variable names. 
+  message('Step 4: Appropriately labels the data set with descriptive variable names.')
   relabeled_data <- expandColumnLabels(with_activity_labels)
-  # 5. From the data set in step 4, creates a second, independent tidy data set 
-  # with the average of each variable for each activity and each subject.
-  #
+  message('Step 5: Caclulate the average of each variable for each activity and subject')
+  means_data <- activityAndSubjectMeans(relabeled_data)
+  message('Step 6: Save the means data as a text file.')
+  write.table(means_data, file='tidy_data.txt', row.name=FALSE)
 }
+
+# Actually run the analysis...
+runAnalysis()
