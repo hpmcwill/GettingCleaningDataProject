@@ -40,7 +40,7 @@
 #   downloadAndUnpackData()
 #
 downloadAndUnpackData <- function() {
-  file_url <- 'https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip'
+  file_url <- 'http://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip'
   file_name <- 'UCI_HAR_Dataset.zip'
   # Download data archive.
   if(!file.exists(file_name)) {
@@ -198,9 +198,9 @@ activityAndSubjectMeans <- function(data) {
   # Use aggregate(), part of the 'stats' package.
   else {
     # Calculate means based on groupings of Subject and Activity.
-    means_data <- aggregate(relabeled_data[,-c(1:2)], 
-                            by=list(relabeled_data$Subject, 
-                                    relabeled_data$Activity), FUN=mean)
+    means_data <- aggregate(data[,-c(1:2)], 
+                            by=list(data$Subject, 
+                                    data$Activity), FUN=mean)
     # Re-label the grouping columns.
     column_labels <- colnames(means_data)
     column_labels[1] <- 'Subject'
