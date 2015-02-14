@@ -66,7 +66,7 @@ downloadAndUnpackData <- function() {
 # the component data files into a single data.frame.
 #
 # Parameters:
-# dataDir: the directory contining the data sets. Default: 'UCI HAR Dataset'
+# dataDir: the directory containing the data sets. Default: 'UCI HAR Dataset'
 # dataset: name of the dataset to load. Default: 'train'
 #
 # Usage:
@@ -117,7 +117,7 @@ mergeTrainingAndTest <- function(dataDir='UCI HAR Dataset') {
 #   selectedData <- extractMeanAndSdColumns(srcData)
 #
 extractMeanAndSdColumns <- function(srcData) {
-  # Indentify mean and standard deviation columns.
+  # Identify mean and standard deviation columns.
   selected_cols <- grepl('\\.(mean|std)\\.', colnames(srcData))
   # Also select the 'Subject' and 'Activity' data columns.
   selected_cols[1] <- TRUE
@@ -141,14 +141,14 @@ labelActivities <- function(data, dataDir='UCI HAR Dataset') {
                                 col.names=c('Index', 'Label'), 
                                 stringsAsFactors=FALSE)
   # Apply the labels as the factor levels for the 'Activity' column.
-  # Since these are parallel, just subsitute the level labels.
+  # Since these are parallel, just substitute the level labels.
   levels(data$Activity) <- activity_labels$Label
   data
 }
 
 ## expandColumnLabels()
 #
-# Expand column lables into a readable camelCase form.
+# Expand column labels into a readable camelCase form.
 #
 # Usage:
 #   relabeledData <- expandColumnLabels(data)
@@ -169,15 +169,15 @@ expandColumnLabels <- function(data) {
   column_names <- sub('\\.Z$', 'AxisZ', column_names)
   column_names <- sub('^t', 'time', column_names)
   column_names <- sub('^f', 'frequency', column_names)
-  # Subsitute column names.
+  # Substitute column names.
   colnames(data) <- column_names
-  # Return relabeled data.
+  # Return relabelled data.
   data
 }
 
 ## activityAndSubjectMeans()
 #
-# Caclulate the means for each variable for each combination of subject and 
+# Calculate the means for each variable for each combination of subject and 
 # activity.
 #
 # Usage:
@@ -218,7 +218,7 @@ activityAndSubjectMeans <- function(data) {
 
 ## runAnalysis()
 #
-# Run the analysis workflow and save the resulting data in a file.
+# Run the analysis work-flow and save the resulting data in a file.
 #
 # Usage:
 #   runAnalysis()
@@ -234,7 +234,7 @@ runAnalysis <- function() {
   with_activity_labels <- labelActivities(selected_data, dataDir='UCI HAR Dataset')
   message('Step 4: Appropriately labels the data set with descriptive variable names.')
   relabeled_data <- expandColumnLabels(with_activity_labels)
-  message('Step 5: Caclulate the average of each variable for each activity and subject')
+  message('Step 5: Calculate the average of each variable for each activity and subject')
   means_data <- activityAndSubjectMeans(relabeled_data)
   message('Step 6: Save the means data as a text file.')
   write.table(means_data, file='tidy_data.txt', row.name=FALSE)
